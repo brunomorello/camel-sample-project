@@ -1,0 +1,16 @@
+<html xmlns:example="http://example.com">
+<body>
+	<table>
+		<tr>
+			<th>Value</th>
+			<th>Date</th>
+			<th>Type</th>
+		</tr>
+		<tr>
+			<th>${property.valor}</th>
+			<th>${property.data}</th>
+			<th>${property.tipo}</th>
+		</tr>
+	</table>
+</body>
+</html>
