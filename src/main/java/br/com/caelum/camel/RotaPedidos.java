@@ -2,6 +2,7 @@ package br.com.caelum.camel;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
+import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
 
@@ -16,6 +17,20 @@ public class RotaPedidos {
 			public void configure() throws Exception {
 				from("file:pedidos?delay=5s&noop=true")
 					.routeId("main-route")
+				.to("validator:pedido.xsd")
+					.errorHandler(deadLetterChannel("file:error")
+						.logExhaustedMessageHistory(true)
+						.maximumRedeliveries(3)
+						.redeliveryDelay(2000)
+						.onRedelivery(new Processor() {
+								
+								@Override
+								public void process(Exchange exchange) throws Exception {
+									int counter = Integer.valueOf(exchange.getIn().getHeader(Exchange.REDELIVERY_COUNTER).toString());
+									int max = Integer.valueOf(exchange.getIn().getHeader(Exchange.REDELIVERY_MAX_COUNTER).toString());
+									System.out.println("Redelivery: " + counter + "/" + max);
+								}
+							}))
 					.multicast()
 						.parallelProcessing()
 							.to("direct:soap")
