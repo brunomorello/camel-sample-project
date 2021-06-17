@@ -19,10 +19,11 @@ public class RotaPedidos {
 					.routeId("main-route")
 				.to("validator:pedido.xsd")
 					.errorHandler(deadLetterChannel("file:error")
-						.logExhaustedMessageHistory(true)
-						.maximumRedeliveries(3)
-						.redeliveryDelay(2000)
-						.onRedelivery(new Processor() {
+							.useOriginalMessage()
+							.logExhaustedMessageHistory(true)
+							.maximumRedeliveries(3)
+							.redeliveryDelay(2000)
+							.onRedelivery(new Processor() {
 								
 								@Override
 								public void process(Exchange exchange) throws Exception {
