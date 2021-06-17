@@ -1,5 +1,6 @@
 package br.com.caelum.camel;
 
+import org.apache.activemq.camel.component.ActiveMQComponent;
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
@@ -13,28 +14,31 @@ public class RotaPedidos {
 	public static void main(String[] args) throws Exception {
 
 		CamelContext context = new DefaultCamelContext();
+		context.addComponent("activemq", ActiveMQComponent.activeMQComponent("tcp://localhost:61616"));
 		context.addRoutes(new RouteBuilder() {
 
 			@Override
 			public void configure() throws Exception {
 				
-				onException(SAXParseException.class)
-					.handled(true)
-					.maximumRedeliveries(3)
-					.redeliveryDelay(1000)
-					.onRedelivery(new DefaultRedelivery());
+				// EIP (Enterprise Integration Pattern -> dead letter channel / dead letter queue
+//				---> defined before any route
+//				onException(SAXParseException.class)
+//					.handled(true)
+//					.maximumRedeliveries(3)
+//					.redeliveryDelay(1000)
+//					.onRedelivery(new DefaultRedelivery());
 				
 				
-				from("file:pedidos?delay=5s&noop=true")
+				from("activemq:queue:pedidos")
 					.routeId("main-route")
 				.to("validator:pedido.xsd")
-//			---> errorHandler handles any error, but what if you want to handle specific exceptions?				
-//					.errorHandler(deadLetterChannel("file:error")
-//							.useOriginalMessage()
+//			---> errorHandler handles any error, but what if you want to handle specific exceptions? **see onException()				
+					.errorHandler(deadLetterChannel("activemq:queue:pedidos.DLQ")
+							.useOriginalMessage()
 //							.logExhaustedMessageHistory(true)
-//							.maximumRedeliveries(3)
-//							.redeliveryDelay(2000)
-//							.onRedelivery(new DefaultRedelivery()))
+							.maximumRedeliveries(3)
+							.redeliveryDelay(2000)
+							.onRedelivery(new DefaultRedelivery()))
 					.multicast()
 						.parallelProcessing()
 							.to("direct:soap")
