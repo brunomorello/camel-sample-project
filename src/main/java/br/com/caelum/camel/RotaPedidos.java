@@ -2,9 +2,11 @@ package br.com.caelum.camel;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
-import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
+import org.xml.sax.SAXParseException;
+
+import br.com.caelum.camel.model.processors.DefaultRedelivery;
 
 public class RotaPedidos {
 
@@ -15,23 +17,24 @@ public class RotaPedidos {
 
 			@Override
 			public void configure() throws Exception {
+				
+				onException(SAXParseException.class)
+					.handled(true)
+					.maximumRedeliveries(3)
+					.redeliveryDelay(1000)
+					.onRedelivery(new DefaultRedelivery());
+				
+				
 				from("file:pedidos?delay=5s&noop=true")
 					.routeId("main-route")
 				.to("validator:pedido.xsd")
-					.errorHandler(deadLetterChannel("file:error")
-							.useOriginalMessage()
-							.logExhaustedMessageHistory(true)
-							.maximumRedeliveries(3)
-							.redeliveryDelay(2000)
-							.onRedelivery(new Processor() {
-								
-								@Override
-								public void process(Exchange exchange) throws Exception {
-									int counter = Integer.valueOf(exchange.getIn().getHeader(Exchange.REDELIVERY_COUNTER).toString());
-									int max = Integer.valueOf(exchange.getIn().getHeader(Exchange.REDELIVERY_MAX_COUNTER).toString());
-									System.out.println("Redelivery: " + counter + "/" + max);
-								}
-							}))
+//			---> errorHandler handles any error, but what if you want to handle specific exceptions?				
+//					.errorHandler(deadLetterChannel("file:error")
+//							.useOriginalMessage()
+//							.logExhaustedMessageHistory(true)
+//							.maximumRedeliveries(3)
+//							.redeliveryDelay(2000)
+//							.onRedelivery(new DefaultRedelivery()))
 					.multicast()
 						.parallelProcessing()
 							.to("direct:soap")
